@@ -1,13 +1,8 @@
-import requests
-from pprint import pprint
+import json
 import datetime
+import requests
 from tqdm import tqdm
-
-with open('api_vk.txt', encoding='utf-8') as f:
-    VKtoken = f.read()
-
-with open('yaToken.txt', encoding='utf-8') as f:
-    YAtoken = f.read()
+from pprint import pprint
 
 class VK_user:
     url = 'https://api.vk.com/method/'
@@ -49,13 +44,16 @@ class VK_user:
                 if url[0] == 'url':
                     urls.append(url[1])
         url_photos_dict = dict(zip(names, urls))
-        # pprint(url_photos_dict)
         return url_photos_dict
 
-Im_VK = VK_user(VKtoken, '5.131')
-
-# pprint(Im_VK.get_inf_photos('17335094'))
-# Im_VK.get_url_photos('552934290')
+    def get_size_photos(self, owner_id):
+        types = []
+        all_inf = self.get_inf_photos(owner_id)
+        for inf in all_inf:
+            for size in inf['sizes'][-1].items():
+                if size[0] == 'type':
+                    types.append(size[1])
+        return types
 
 class Yandex_user():
     uri = 'https://cloud-api.yandex.net/'
@@ -75,30 +73,35 @@ class Yandex_user():
         headers = self.get_headers()
         params = {"path": folderName, "overwrite": "true"}
         response = requests.put(newfolder_url, headers=headers, params=params)
-        response.raise_for_status()
         if response.status_code == 201:
-            print(f'Папка с именем "{folderName}" создана. Начинаем копирование фотографий с вашего ВК')
+            print(f'Папка с именем "{folderName}" создана.')
         return folderName
 
-    def upload_by_url(self, name_url_dict,folderName):
+    def upload_by_url(self, name_url_dict,folderName, photo_type):
+        data = {}
         upload_url = self.uri + 'v1/disk/resources/upload'
         headers = self.get_headers()
-        for vk_name, vk_url in name_url_dict.items():
+        for vk_name, vk_url in tqdm(name_url_dict.items()):
             params = {"path": str(folderName) + '/' + str(vk_name) + '.jpg', "url" : vk_url, "overwrite": "true"}
             response = requests.post(upload_url, headers=headers, params=params)
             if response.status_code == 202:
-                print(f'Фотография "{vk_name}".jpg загружена.')
-        print(response.json())
+                data['file_name'] = [vk_name]
+                for type in photo_type:
+                    data['size'] = [type]
+                with open("data_file.json", "a") as f:
+                    json.dump(data, f)
+                    print(f'Информация о загрузке {vk_name}.jpg добавлена в json')
+        pprint(response.json())
         return response.json()
 
+if __name__ == '__main__':
 
-Im_ya = Yandex_user(YAtoken)
+    with open('api_vk.txt', encoding='utf-8') as f:
+        VKtoken = f.read()
+    with open('yaToken.txt', encoding='utf-8') as f:
+        YAtoken = f.read()
+    Im_ya = Yandex_user(YAtoken)
+    Im_VK = VK_user(VKtoken, '5.131')
+    Im_ya.upload_by_url(Im_VK.get_url_photos(''), Im_ya.newfolder(), Im_VK.get_size_photos(''))
 
-Im_ya.upload_by_url(Im_VK.get_url_photos('552934290'), Im_ya.newfolder())
-
-
-# if __name__ == '__main__':
-#     mylist = []
-#     for i in tqdm(mylist):
-#         time.sleep(1)
 
