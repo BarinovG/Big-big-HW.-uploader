@@ -3,6 +3,9 @@ import datetime
 import requests
 from tqdm import tqdm
 from pprint import pprint
+with open("data_file.json", "w") as f:
+    pass
+
 
 class VK_user:
     url = 'https://api.vk.com/method/'
@@ -19,7 +22,7 @@ class VK_user:
             'owner_id' : owner_id,
             'album_id' : "profile",
             'extended' : 1,
-            'photo_sizes' : 'z',
+            'photo_sizes' : 0,
             'count' : 5,
             'rev' : 0
         }
